@@ -1,0 +1,711 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090a0f" />
+  <title>Chromafy AI — Pro B&amp;W to Color Studio</title>
+  
+<link rel="stylesheet" href="style.css" /></head>
+
+<body>
+
+  <div class="app">
+
+    <!-- ==================== TOP HEADER ==================== -->
+    <header class="header">
+      <div class="logo-group">
+        <div class="logo-icon">✨</div>
+        <div class="logo-text">
+          <span>Chromafy</span>
+          <span class="logo-badge">PRO STUDIO</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Quick Demo Sample Trigger -->
+        <button class="tool-btn" id="btnSamplesMenu" title="Load High-Res Demo B&amp;W Photo">
+          <span>🖼️</span><span>Samples</span>
+        </button>
+
+        <!-- Import Button -->
+        <button class="tool-btn" id="btnHeaderImport" title="Import Image">
+          <span>📁</span><span>Open</span>
+        </button>
+
+        <!-- Export Button -->
+        <button class="tool-btn export-highlight-btn" id="btnHeaderExport" title="Export Image (.gif, .png, .jpg)">
+          <span>⬇</span><span>Export</span>
+        </button>
+
+        <!-- Undo / Redo -->
+        <button class="tool-btn icon-only" id="btnUndo" title="Undo (Ctrl+Z)" disabled="">↺</button>
+        <button class="tool-btn icon-only" id="btnRedo" title="Redo (Ctrl+Y)" disabled="">↻</button>
+
+        <!-- Compare Mode Curtain -->
+        <button class="tool-btn" id="btnCompareToggle" title="Split Screen Compare">
+          <span>⇆</span><span>Compare</span>
+        </button>
+
+        <!-- Diagnostics Modal Trigger -->
+        <button class="tool-btn icon-only" id="btnDiag" title="System Diagnostics &amp; Auto-Fix">🔧</button>
+
+        <!-- Fullscreen -->
+        <button class="tool-btn icon-only" id="btnFullscreen" title="Fullscreen View">⛶</button>
+      </div>
+    </header>
+
+    <!-- ==================== MAIN WORKSPACE ==================== -->
+    <div class="workspace">
+
+      <!-- CANVAS VIEWPORT -->
+      <div class="canvas-viewport" id="canvasViewport">
+
+        <!-- Top-left Image Meta Badge -->
+        <div class="info-bar" id="infoBar" style="display:none;">
+          <div class="info-dot"></div>
+          <span id="infoDimensions">—</span>
+          <span style="opacity:0.4;">|</span>
+          <span id="infoFileSize">—</span>
+        </div>
+
+        <!-- Transform Stage (Zoom & Pan) -->
+        <div class="stage-transform" id="stageTransform">
+          <!-- Empty State Container -->
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon-box">🎨</div>
+            <h2>Transform B&amp;W Photos to Vibrant Color</h2>
+            <p>Drag &amp; drop your vintage black and white photo here, or explore realistic AI tone profiles and manual
+              brush colorization.</p>
+            <button class="upload-primary-btn" id="btnImportEmpty">
+              <span>📂</span><span>Upload Black &amp; White Image</span>
+            </button>
+
+            <div class="samples-row">
+              <div class="samples-title">Or Try A One-Click Sample Photo</div>
+              <div class="sample-chips">
+                <button class="sample-chip" data-sample="portrait"><span>👤</span> Vintage Portrait</button>
+                <button class="sample-chip" data-sample="street"><span>🏛️</span> Historic Street</button>
+                <button class="sample-chip" data-sample="nature"><span>🌲</span> Alpine Lake</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Render Canvas Container -->
+          <div class="canvas-container" id="canvasContainer" style="display:none;">
+            <canvas id="mainCanvas"></canvas>
+            <canvas id="paintCanvas"></canvas>
+
+            <!-- Compare Curtain Overlay -->
+            <div class="curtain-overlay" id="curtainOverlay">
+              <div class="curtain-pill-left">ORIGINAL B&amp;W</div>
+              <div class="curtain-pill-right">COLORIZED</div>
+              <div class="curtain-original" id="curtainOriginal">
+                <canvas id="curtainCanvas"></canvas>
+                <div class="curtain-handle" id="curtainHandle">⇆</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Canvas HUD (Zoom & Peek) -->
+        <div class="canvas-hud" id="canvasHud" style="display:none;">
+          <button class="hud-btn" id="btnZoomOut" title="Zoom Out (−)">−</button>
+          <div class="hud-zoom-val" id="hudZoomVal">100%</div>
+          <button class="hud-btn" id="btnZoomIn" title="Zoom In (+)">+</button>
+          <button class="hud-btn text-btn" id="btnZoomFit" title="Fit to Screen">Fit</button>
+          <button class="hud-btn text-btn" id="btnZoom100" title="100% Actual Pixels">1:1</button>
+          <div class="hud-divider"></div>
+          <button class="hud-btn text-btn peek-btn" id="btnPeekOriginal" title="Hold to Peek Original B&amp;W">
+            <span>👁️</span><span>Peek B&amp;W</span>
+          </button>
+        </div>
+
+        <!-- Brush Floating Cursor Preview -->
+        <div class="brush-cursor" id="brushCursor"></div>
+
+        <!-- Background Processing Loader -->
+        <div class="loader" id="loader">
+          <div class="spinner"></div>
+          <div class="loader-text" id="loaderText">Rendering Scene…</div>
+        </div>
+
+      </div>
+
+      <!-- STUDIO SIDEBAR DOCK -->
+      <aside class="studio-dock" id="studioDock">
+
+        <!-- Navigation Tabs -->
+        <nav class="dock-tabs" id="dockTabs">
+          <button class="dock-tab active" data-tab="presets"><span>✨</span><span>Presets</span></button>
+          <button class="dock-tab" data-tab="brush"><span>🖌️</span><span>Color Brush</span></button>
+          <button class="dock-tab" data-tab="rgb"><span>🎨</span><span>RGB Layers</span></button>
+          <button class="dock-tab" data-tab="balance"><span>⚖️</span><span>Balance</span></button>
+          <button class="dock-tab" data-tab="adjust"><span>⚙️</span><span>Adjust</span></button>
+          <button class="dock-tab" data-tab="master"><span>🎛️</span><span>Master</span></button>
+          <button class="dock-tab" data-tab="export"><span>💾</span><span>Save</span></button>
+        </nav>
+
+        <!-- Panel Contents -->
+        <div class="dock-content">
+
+          <!-- 1. AI PRESETS PANE -->
+          <div class="tab-pane active" id="pane-presets">
+            <div class="section-header">
+              <span class="section-title">Color Grade Presets</span>
+              <button class="reset-mini-btn" id="btnResetPreset">Reset</button>
+            </div>
+            <div class="presets-grid" id="presetsGrid">
+              <!-- Dynamically populated via JS -->
+            </div>
+            <p style="font-size:11px; color:var(--text-muted); line-height:1.4;">
+              💡 Presets map luminance spectrums directly to photographic chrominance profiles while preserving deep
+              blacks and clean whites.
+            </p>
+          </div>
+
+          <!-- 2. COLOR BRUSH PANE -->
+          <div class="tab-pane" id="pane-brush">
+            <div class="section-header">
+              <span class="section-title">Smart Colorization Brush</span>
+              <span style="font-size:10px; color:var(--accent-green); font-weight:600;">ACTIVE</span>
+            </div>
+
+            <div class="brush-modes-row">
+              <button class="mode-btn active" id="btnModePaint"><span>🖌️</span><span>Paint Color</span></button>
+              <button class="mode-btn" id="btnModeErase"><span>🧹</span><span>Eraser</span></button>
+            </div>
+
+            <div class="slider-meta" style="margin-bottom:8px;">
+              <span class="slider-name">Realistic Color Palette</span>
+            </div>
+            <div class="swatches-grid" id="swatchesGrid">
+              <!-- Dynamically populated via JS -->
+            </div>
+
+            <div class="color-picker-box">
+              <input type="color" id="customColorPicker" value="#e29e71" class="color-picker-input" />
+              <div style="flex:1;">
+                <div style="font-size:11px; font-weight:600;">Custom Tint Hue</div>
+                <div style="font-size:10px; color:var(--text-muted);" id="customColorHex">#E29E71</div>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">Brush Size</span>
+                  <span class="slider-val" id="valBrushSize">28 px</span>
+                </div>
+                <div class="slider-wrap">
+                  <input type="range" id="sliderBrushSize" min="4" max="120" value="28" />
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">Brush Opacity</span>
+                  <span class="slider-val" id="valBrushOpacity">75%</span>
+                </div>
+                <div class="slider-wrap">
+                  <input type="range" id="sliderBrushOpacity" min="5" max="100" value="75" />
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">Edge Feather (Softness)</span>
+                  <span class="slider-val" id="valBrushSoftness">70%</span>
+                </div>
+                <div class="slider-wrap">
+                  <input type="range" id="sliderBrushSoftness" min="0" max="100" value="70" />
+                </div>
+              </div>
+            </div>
+
+            <div class="paint-actions-row">
+              <button class="paint-btn" id="btnUndoPaint">↺ Undo Stroke</button>
+              <button class="paint-btn danger" id="btnClearPaint">🗑️ Clear Paint</button>
+            </div>
+          </div>
+
+          <!-- 3. RGB LAYERS PANE -->
+          <div class="tab-pane" id="pane-rgb">
+            <div class="section-header">
+              <span class="section-title">RGB Spectral Channels</span>
+              <button class="reset-mini-btn" id="btnResetRGB">Reset All</button>
+            </div>
+
+            <!-- Red Layer -->
+            <div class="layer-card red">
+              <div class="layer-header">
+                <div class="layer-title">
+                  <div class="layer-dot"></div>Red Channel
+                </div>
+                <div class="layer-toggles">
+                  <button class="toggle-btn on" data-toggle="R">ON</button>
+                  <button class="reset-mini-btn" data-reset="R">↺</button>
+                </div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-step="R" data-dir="-1">−</button>
+                  <input type="range" class="slider-red" id="sliderR" min="0" max="200" value="100" />
+                  <button class="slider-btn" data-step="R" data-dir="1">+</button>
+                </div>
+                <div class="slider-meta" style="margin-top:6px;">
+                  <span class="slider-name">Intensity</span>
+                  <span class="slider-val" id="valR">100%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Green Layer -->
+            <div class="layer-card green">
+              <div class="layer-header">
+                <div class="layer-title">
+                  <div class="layer-dot"></div>Green Channel
+                </div>
+                <div class="layer-toggles">
+                  <button class="toggle-btn on" data-toggle="G">ON</button>
+                  <button class="reset-mini-btn" data-reset="G">↺</button>
+                </div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-step="G" data-dir="-1">−</button>
+                  <input type="range" class="slider-green" id="sliderG" min="0" max="200" value="100" />
+                  <button class="slider-btn" data-step="G" data-dir="1">+</button>
+                </div>
+                <div class="slider-meta" style="margin-top:6px;">
+                  <span class="slider-name">Intensity</span>
+                  <span class="slider-val" id="valG">100%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Blue Layer -->
+            <div class="layer-card blue">
+              <div class="layer-header">
+                <div class="layer-title">
+                  <div class="layer-dot"></div>Blue Channel
+                </div>
+                <div class="layer-toggles">
+                  <button class="toggle-btn on" data-toggle="B">ON</button>
+                  <button class="reset-mini-btn" data-reset="B">↺</button>
+                </div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-step="B" data-dir="-1">−</button>
+                  <input type="range" class="slider-blue" id="sliderB" min="0" max="200" value="100" />
+                  <button class="slider-btn" data-step="B" data-dir="1">+</button>
+                </div>
+                <div class="slider-meta" style="margin-top:6px;">
+                  <span class="slider-name">Intensity</span>
+                  <span class="slider-val" id="valB">100%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. BALANCE & TONE PANE -->
+          <div class="tab-pane" id="pane-balance">
+            <div class="section-header">
+              <span class="section-title">Color Temperature &amp; Grading</span>
+              <button class="reset-mini-btn" id="btnResetBalance">Reset</button>
+            </div>
+
+            <div class="control-group">
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">🌡️ Temperature (Cool ↔ Warm)</span>
+                  <span class="slider-val" id="valTemp">0</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="temperature" data-dir="-1">−</button>
+                  <input type="range" id="sliderTemp" min="-100" max="100" value="0" />
+                  <button class="slider-btn" data-ctrl="temperature" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">🌸 Tint (Green ↔ Magenta)</span>
+                  <span class="slider-val" id="valTint">0</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="tint" data-dir="-1">−</button>
+                  <input type="range" id="sliderTint" min="-100" max="100" value="0" />
+                  <button class="slider-btn" data-ctrl="tint" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">🌈 Vibrance</span>
+                  <span class="slider-val" id="valVibrance">0%</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="vibrance" data-dir="-1">−</button>
+                  <input type="range" id="sliderVibrance" min="-100" max="100" value="0" />
+                  <button class="slider-btn" data-ctrl="vibrance" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">💧 Saturation</span>
+                  <span class="slider-val" id="valSaturation">100%</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="saturation" data-dir="-1">−</button>
+                  <input type="range" id="sliderSaturation" min="0" max="200" value="100" />
+                  <button class="slider-btn" data-ctrl="saturation" data-dir="1">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. ADJUSTMENTS PANE -->
+          <div class="tab-pane" id="pane-adjust">
+            <div class="section-header">
+              <span class="section-title">Exposure &amp; Detail</span>
+              <button class="reset-mini-btn" id="btnResetAdjust">Reset</button>
+            </div>
+
+            <div class="control-group">
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">☀ Brightness</span>
+                  <span class="slider-val" id="valBrightness">100%</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="brightness" data-dir="-1">−</button>
+                  <input type="range" id="sliderBrightness" min="0" max="200" value="100" />
+                  <button class="slider-btn" data-ctrl="brightness" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">◐ Contrast</span>
+                  <span class="slider-val" id="valContrast">100%</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="contrast" data-dir="-1">−</button>
+                  <input type="range" id="sliderContrast" min="0" max="200" value="100" />
+                  <button class="slider-btn" data-ctrl="contrast" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">💡 Exposure</span>
+                  <span class="slider-val" id="valExposure">0</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="exposure" data-dir="-1">−</button>
+                  <input type="range" id="sliderExposure" min="-50" max="50" value="0" />
+                  <button class="slider-btn" data-ctrl="exposure" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">🎨 Hue Angle</span>
+                  <span class="slider-val" id="valHue">0°</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="hue" data-dir="-1">−</button>
+                  <input type="range" id="sliderHue" min="0" max="360" value="0" />
+                  <button class="slider-btn" data-ctrl="hue" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">✦ Texture Sharpness</span>
+                  <span class="slider-val" id="valSharpness">0%</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="sharpness" data-dir="-1">−</button>
+                  <input type="range" id="sliderSharpness" min="0" max="100" value="0" />
+                  <button class="slider-btn" data-ctrl="sharpness" data-dir="1">+</button>
+                </div>
+              </div>
+
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">🔘 Vignette Glow</span>
+                  <span class="slider-val" id="valVignette">0%</span>
+                </div>
+                <div class="slider-wrap">
+                  <button class="slider-btn" data-ctrl="vignette" data-dir="-1">−</button>
+                  <input type="range" id="sliderVignette" min="0" max="100" value="0" />
+                  <button class="slider-btn" data-ctrl="vignette" data-dir="1">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. MASTER DIAL PANE -->
+          <div class="tab-pane" id="pane-master">
+            <div class="section-header">
+              <span class="section-title">Master Multiplier Knob</span>
+              <button class="reset-mini-btn" id="btnResetMaster">100%</button>
+            </div>
+
+            <div class="dial-stage">
+              <div class="dial-container" id="dialContainer">
+                <div class="dial-outer-ring">
+                  <div class="dial-inner" id="dialInner">
+                    <div class="dial-needle" id="dialNeedle"></div>
+                    <div class="dial-value" id="dialValue">100%</div>
+                    <div class="dial-label">Master Multiplier</div>
+                  </div>
+                </div>
+              </div>
+
+              <p style="font-size:11px; color:var(--text-muted); text-align:center; margin-bottom:12px;">
+                Rotate clockwise to intensify color layers, counter-clockwise to attenuate.
+              </p>
+
+              <div class="dial-quick-row">
+                <button class="dial-step-btn" id="btnDialMinus">− 10%</button>
+                <button class="dial-step-btn" id="btnDialReset">Default (100%)</button>
+                <button class="dial-step-btn" id="btnDialPlus">+ 10%</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. SAVE & EXPORT PANE -->
+          <div class="tab-pane" id="pane-export">
+            <div class="section-header">
+              <span class="section-title">Save &amp; Export Options</span>
+            </div>
+
+            <div class="slider-meta" style="margin-bottom:8px;">
+              <span class="slider-name">File Format</span>
+            </div>
+            <div class="export-formats-row">
+              <button class="format-chip active" data-fmt="png">.PNG</button>
+              <button class="format-chip" data-fmt="jpeg">.JPG</button>
+              <button class="format-chip" data-fmt="gif">.GIF</button>
+              <button class="format-chip" data-fmt="webp">.WEBP</button>
+            </div>
+
+            <!-- Quality Tier: HD vs SD -->
+            <div class="slider-meta" style="margin-bottom:8px;">
+              <span class="slider-name">Image Quality &amp; Resolution</span>
+            </div>
+            <div class="quality-tier-row">
+              <button class="quality-tier-chip active" data-tier="hd">
+                <span class="tier-badge">HD Quality</span>
+                <span class="tier-desc" id="hdTierDesc">100% Full Original Resolution</span>
+              </button>
+              <button class="quality-tier-chip" data-tier="sd">
+                <span class="tier-badge">SD Quality</span>
+                <span class="tier-desc" id="sdTierDesc">Standard 720p (Faster / Web)</span>
+              </button>
+            </div>
+
+            <!-- GIF Options Box -->
+            <div class="control-group" id="gifOptionsBox" style="display:none;">
+              <div class="slider-meta" style="margin-bottom:6px;">
+                <span class="slider-name">GIF Animation Mode</span>
+              </div>
+              <div class="gif-modes-row">
+                <button class="format-chip active" data-gif-mode="static">🖼️ Static Photo</button>
+                <button class="format-chip" data-gif-mode="loop">🎬 Before/After Loop</button>
+              </div>
+            </div>
+
+            <!-- JPG / WEBP Compression Slider -->
+            <div class="control-group" id="qualityBox" style="display:none;">
+              <div class="slider-row">
+                <div class="slider-meta">
+                  <span class="slider-name">JPEG Quality Compression</span>
+                  <span class="slider-val" id="valQuality">92%</span>
+                </div>
+                <div class="slider-wrap">
+                  <input type="range" id="sliderQuality" min="20" max="100" value="92" />
+                </div>
+              </div>
+            </div>
+
+            <div class="export-stat-box">
+              <div>
+                <div style="color:var(--text-secondary); font-size:11px;">Resolution</div>
+                <div id="exportResVal" style="font-weight:700; color:#fff;">—</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="color:var(--text-secondary); font-size:11px;">Target Output</div>
+                <div id="exportFmtTag" style="font-weight:700; color:var(--accent-green);">PNG (HD)</div>
+              </div>
+            </div>
+
+            <button class="download-primary-btn" id="btnDownload">
+              <span>⬇</span><span id="btnDownloadLabel">Download HD PNG Photo</span>
+            </button>
+
+            <button class="secondary-action-btn" id="btnCopyClipboard">
+              <span>📋</span><span>Copy Image to Clipboard</span>
+            </button>
+
+            <button class="secondary-action-btn" id="btnResetEverything" style="color:var(--accent-red); margin-top:12px;">
+              <span>↺</span><span>Reset Entire Project</span>
+            </button>
+          </div>
+
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ==================== MOBILE BOTTOM NAV ==================== -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-sheet="presets">
+        <div class="nav-icon">✨</div>
+        <div>Presets</div>
+      </button>
+      <button class="nav-btn" data-sheet="brush">
+        <div class="nav-icon">🖌️</div>
+        <div>Brush</div>
+      </button>
+      <button class="nav-btn" data-sheet="rgb">
+        <div class="nav-icon">🎨</div>
+        <div>RGB</div>
+      </button>
+      <button class="nav-btn" data-sheet="adjust">
+        <div class="nav-icon">⚙️</div>
+        <div>Adjust</div>
+      </button>
+      <button class="nav-btn" data-sheet="export">
+        <div class="nav-icon">💾</div>
+        <div>Save</div>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Hidden File Input -->
+  <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ==================== EXPORT MODAL ==================== -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title"><span>⬇</span><span>Export Colorized Image</span></div>
+        <button class="modal-close-btn" id="closeExportModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Format Selection -->
+        <div class="slider-meta" style="margin-bottom:8px;">
+          <span class="slider-name">File Format</span>
+        </div>
+        <div class="export-formats-row" id="modalFormatRow">
+          <button class="format-chip active" data-fmt="png">.PNG</button>
+          <button class="format-chip" data-fmt="jpeg">.JPG</button>
+          <button class="format-chip" data-fmt="gif">.GIF</button>
+          <button class="format-chip" data-fmt="webp">.WEBP</button>
+        </div>
+
+        <!-- Quality Tier (SD vs HD) -->
+        <div class="slider-meta" style="margin-bottom:8px;">
+          <span class="slider-name">Image Resolution &amp; Quality</span>
+        </div>
+        <div class="quality-tier-row" id="modalTierRow">
+          <button class="quality-tier-chip active" data-tier="hd">
+            <span class="tier-badge">HD Quality</span>
+            <span class="tier-desc" id="mHdTierDesc">100% Full Original Resolution</span>
+          </button>
+          <button class="quality-tier-chip" data-tier="sd">
+            <span class="tier-badge">SD Quality</span>
+            <span class="tier-desc" id="mSdTierDesc">Standard 720p (Faster / Web)</span>
+          </button>
+        </div>
+
+        <!-- GIF Options Box -->
+        <div class="control-group" id="modalGifOptions" style="display:none;">
+          <div class="slider-meta" style="margin-bottom:6px;">
+            <span class="slider-name">GIF Animation Mode</span>
+          </div>
+          <div class="gif-modes-row" id="modalGifModes">
+            <button class="format-chip active" data-gif-mode="static">🖼️ Static Photo</button>
+            <button class="format-chip" data-gif-mode="loop">🎬 Before &amp; After Loop</button>
+          </div>
+        </div>
+
+        <!-- JPG / WEBP Compression Slider -->
+        <div class="control-group" id="modalQualityBox" style="display:none;">
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="slider-name">JPEG Quality Compression</span>
+              <span class="slider-val" id="modalValQuality">92%</span>
+            </div>
+            <div class="slider-wrap">
+              <input type="range" id="modalSliderQuality" min="20" max="100" value="92" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Export Stats -->
+        <div class="export-stat-box">
+          <div>
+            <div style="color:var(--text-secondary); font-size:11px;">Resolution</div>
+            <div id="modalExportRes" style="font-weight:700; color:#fff;">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:var(--text-secondary); font-size:11px;">Target Output</div>
+            <div id="modalExportFmt" style="font-weight:700; color:var(--accent-green);">PNG (HD)</div>
+          </div>
+        </div>
+
+        <button class="download-primary-btn" id="modalBtnDownload">
+          <span>⬇</span><span id="modalDownloadLabel">Download HD PNG Photo</span>
+        </button>
+
+        <button class="secondary-action-btn" id="modalBtnCopy">
+          <span>📋</span><span>Copy Image to Clipboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAGNOSTIC & FIX MODAL ==================== -->
+  <div class="modal-overlay" id="diagModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"><span>🔧</span><span>System Diagnostics &amp; Health</span></div>
+        <button class="modal-close-btn" id="closeDiag">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-secondary); margin-bottom:14px; font-size:12px;">
+          Automated self-test checking HTML5 Canvas, memory allocations, color pipeline integrity, and event bindings.
+        </p>
+        <div class="diag-list" id="diagList"></div>
+        <button class="download-primary-btn" id="btnRunDiag" style="margin-bottom:8px;">
+          <span>▶</span><span>Re-Run Diagnostics</span>
+        </button>
+        <button class="secondary-action-btn" id="btnAutoFix">
+          <span>⚡</span><span>Auto-Fix &amp; Optimize All Settings</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FULLSCREEN VIEW ==================== -->
+  <div class="fullscreen-view" id="fullscreenView">
+    <button class="fullscreen-close" id="closeFullscreen">✕</button>
+    <canvas id="fullscreenCanvas"></canvas>
+  </div>
+
+  <!-- ============================================================
+     JAVASCRIPT CORE ENGINE
+     ============================================================ -->
+  
+
+
+<script src="script.js"></script></body></html>
