@@ -138,6 +138,13 @@
           <button class="dock-tab active" data-tab="presets"><span>✨</span><span>Presets</span></button>
           <button class="dock-tab" data-tab="brush"><span>🖌️</span><span>Color Brush</span></button>
           <button class="dock-tab" data-tab="rgb"><span>🎨</span><span>RGB Layers</span></button>
+          
+          <!-- HIDE / UNHIDE TAB TOGGLE BUTTON (CENTER OF DOCK TABS) -->
+          <button class="dock-tab toggle-tab-btn" id="btnToggleTab" title="Hide or Unhide Tab">
+            <span class="toggle-tab-icon" id="toggleTabIcon">▼</span>
+            <span class="toggle-tab-text" id="toggleTabLabel">Hide Tab</span>
+          </button>
+
           <button class="dock-tab" data-tab="balance"><span>⚖️</span><span>Balance</span></button>
           <button class="dock-tab" data-tab="adjust"><span>⚙️</span><span>Adjust</span></button>
           <button class="dock-tab" data-tab="master"><span>🎛️</span><span>Master</span></button>
@@ -584,6 +591,14 @@
         <div>Save</div>
       </button>
     </nav>
+    
+    <!-- Mobile Floating Pills: Unhide Tab & Unhide Bottom Buttons -->
+    <button class="mobile-unhide-tab-pill" id="btnMobileUnhideTab" title="Unhide Studio Tab">
+      <span>✨</span><span>Unhide Tab</span>
+    </button>
+    <button class="mobile-unhide-nav-pill" id="btnMobileUnhideNav" title="Double-tap canvas or tap here to restore bottom buttons">
+      <span>▲</span><span>Show Buttons</span>
+    </button>
 
   </div>
 

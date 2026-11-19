@@ -1618,8 +1618,68 @@
   const panes = document.querySelectorAll('.tab-pane');
   const studioDock = $('studioDock');
 
+  // Track Tab Hidden state (controlled by center button in dockTabs)
+  state.isTabHidden = false;
+  state.isBottomNavHidden = false;
+
+  function toggleTabVisibility(forceState) {
+    if (typeof forceState === 'boolean') {
+      state.isTabHidden = forceState;
+    } else {
+      state.isTabHidden = !state.isTabHidden;
+    }
+
+    const icon = $('toggleTabIcon');
+    const label = $('toggleTabLabel');
+    const toggleBtn = $('btnToggleTab');
+    const mobileUnhideTab = $('btnMobileUnhideTab');
+
+    if (state.isTabHidden) {
+      studioDock.classList.add('tab-hidden');
+      studioDock.classList.remove('sheet-open');
+      if (icon) icon.textContent = '▲';
+      if (label) label.textContent = 'Unhide Tab';
+      if (toggleBtn) {
+        toggleBtn.classList.add('tab-is-hidden');
+        toggleBtn.title = 'Unhide Tab (Show Panel)';
+      }
+      if (mobileUnhideTab) mobileUnhideTab.classList.add('visible');
+      showToast('Tab hidden — Expanded canvas view', 'info');
+    } else {
+      studioDock.classList.remove('tab-hidden');
+      studioDock.classList.add('sheet-open');
+      if (icon) icon.textContent = '▼';
+      if (label) label.textContent = 'Hide Tab';
+      if (toggleBtn) {
+        toggleBtn.classList.remove('tab-is-hidden');
+        toggleBtn.title = 'Hide Tab (Hide Panel)';
+      }
+      if (mobileUnhideTab) mobileUnhideTab.classList.remove('visible');
+      showToast('Tab unhidden', 'info');
+    }
+
+    // Smoothly re-fit canvas to newly expanded/contracted viewport
+    setTimeout(() => {
+      if (state.originalImageData) {
+        fitToViewport();
+        scheduleRender();
+      }
+    }, 320);
+  }
+
   function openTab(tabName) {
-    dockTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+    if (!tabName) return;
+
+    // If tab was previously hidden, unhide it automatically when user selects a tab
+    if (state.isTabHidden) {
+      toggleTabVisibility(false);
+    }
+
+    dockTabs.forEach(t => {
+      if (t.dataset.tab) {
+        t.classList.toggle('active', t.dataset.tab === tabName);
+      }
+    });
     panes.forEach(p => p.classList.toggle('active', p.id === `pane-${tabName}`));
     studioDock.classList.add('sheet-open');
 
@@ -1636,9 +1696,26 @@
     }
   }
 
+  // Bind tab click listeners (excluding the center toggle button)
   dockTabs.forEach(t => {
-    t.addEventListener('click', () => openTab(t.dataset.tab));
+    if (t.dataset.tab) {
+      t.addEventListener('click', () => openTab(t.dataset.tab));
+    }
   });
+
+  // Center Hide / Unhide button in dockTabs
+  if ($('btnToggleTab')) {
+    $('btnToggleTab').addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleTabVisibility();
+    });
+  }
+
+  if ($('btnMobileUnhideTab')) {
+    $('btnMobileUnhideTab').addEventListener('click', () => {
+      toggleTabVisibility(false);
+    });
+  }
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1646,6 +1723,60 @@
       openTab(tab);
     });
   });
+
+  // ---------- MOBILE VIEW: DOUBLE CLICK HIDE BOTTOM BUTTONS ----------
+  function toggleBottomNavVisibility(forceState) {
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (!bottomNav) return;
+
+    if (typeof forceState === 'boolean') {
+      state.isBottomNavHidden = forceState;
+    } else {
+      state.isBottomNavHidden = !state.isBottomNavHidden;
+    }
+
+    const appEl = document.querySelector('.app');
+    const unhidePill = $('btnMobileUnhideNav');
+
+    if (state.isBottomNavHidden) {
+      bottomNav.classList.add('nav-hidden');
+      if (appEl) appEl.classList.add('bottom-nav-hidden');
+      if (unhidePill) unhidePill.classList.add('visible');
+      showToast('Bottom buttons hidden (Double-click/tap canvas to show)', 'info');
+    } else {
+      bottomNav.classList.remove('nav-hidden');
+      if (appEl) appEl.classList.remove('bottom-nav-hidden');
+      if (unhidePill) unhidePill.classList.remove('visible');
+      showToast('Bottom buttons restored', 'info');
+    }
+  }
+
+  // 1. Standard Desktop & Mobile dblclick listener
+  canvasViewport.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button, input, .canvas-hud, .curtain-handle, .studio-dock, .modal-overlay, .toast')) return;
+    toggleBottomNavVisibility();
+  });
+
+  // 2. Mobile touch double-tap listener (immediate & snappy on touchscreens)
+  let lastTapTime = 0;
+  canvasViewport.addEventListener('touchend', (e) => {
+    if (e.target.closest('button, input, .canvas-hud, .curtain-handle, .studio-dock, .modal-overlay, .toast')) return;
+    const now = Date.now();
+    const diff = now - lastTapTime;
+    if (diff < 350 && diff > 40) {
+      toggleBottomNavVisibility();
+      e.preventDefault();
+      lastTapTime = 0;
+      return;
+    }
+    lastTapTime = now;
+  }, { passive: false });
+
+  if ($('btnMobileUnhideNav')) {
+    $('btnMobileUnhideNav').addEventListener('click', () => {
+      toggleBottomNavVisibility(false);
+    });
+  }
 
   // ---------- GIF89a ENCODING ENGINE (PURE JS, ZERO DEPENDENCY) ----------
   function encodeGif(frames, width, height, defaultDelayCs = 100) {
